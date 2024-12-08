@@ -6,6 +6,7 @@ web_bin_name="tailscale"
 #bin_dir="/data/data/com.termux/files/home/code/TailscaleForMagisk"
 STATE_FILE="${path}/tailscaled.state"
 SOCKET_FILE="${path}/tailscaled.sock"
+RESOLV_FILE="${path}/resolv.conf"
 pid_file=$path/pid
 web_pid_file=$path/web_pid
 busybox="/data/adb/magisk/busybox"
@@ -46,6 +47,9 @@ start_bin() {
 		#statements
 		touch $SOCKET_FILE
 	fi
+	if [[ ! -f $RESOLV_FILE ]]; then
+		touch $RESOLV_FILE
+	fi
 	if ! bin_status ; then
 		nohup $bin_name --state=${STATE_FILE} --socket=${SOCKET_FILE} > /dev/null 2> $path/error.log &
 		echo -n $! > $path/pid
@@ -60,11 +64,9 @@ start_bin() {
 			echo "\033[31mstart web management fail，plese visit ${path}/web.log\033[0m"
 		fi
 	fi
-	
 }
 start_service() {
 	start_bin
-	
 }
 stop_service() {
 		if web_bin_status; then

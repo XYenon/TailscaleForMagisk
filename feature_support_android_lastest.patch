@@ -1,49 +1,8 @@
-Subject: [PATCH] feature:support android
----
-Index: paths/paths.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/paths/paths.go b/paths/paths.go
---- a/paths/paths.go	(revision d601f16e1b676b11902ee5d71e6042d95fb09252)
-+++ b/paths/paths.go	(date 1722357694546)
-@@ -30,6 +30,9 @@
- 	if runtime.GOOS == "plan9" {
- 		return "/srv/tailscaled.sock"
- 	}
-+	if runtime.GOOS == "android" {
-+		return "/data/adb/tailscale/tailscaled.sock"
-+	}
- 	switch distro.Get() {
- 	case distro.Synology:
- 		if distro.DSMVersion() == 6 {
-Index: paths/paths_unix.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/paths/paths_unix.go b/paths/paths_unix.go
---- a/paths/paths_unix.go	(revision d601f16e1b676b11902ee5d71e6042d95fb09252)
-+++ b/paths/paths_unix.go	(date 1722357704761)
-@@ -30,6 +30,8 @@
- 		return "/Library/Tailscale/tailscaled.state"
- 	case "aix":
- 		return "/var/tailscale/tailscaled.state"
-+	case "android":
-+		return "/data/adb/tailscale/tailscaled.state"
- 	default:
- 		return ""
- 	}
-Index: Makefile
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/Makefile b/Makefile
---- a/Makefile	(revision d601f16e1b676b11902ee5d71e6042d95fb09252)
-+++ b/Makefile	(date 1722357704778)
-@@ -35,7 +35,7 @@
+index 960f13885..76fd4c4ed 100644
+--- a/Makefile
++++ b/Makefile
+@@ -35,7 +35,7 @@ depaware: ## Run depaware checks
  		tailscale.com/cmd/stund
  
  buildwindows: ## Build tailscale CLI for windows/amd64
@@ -52,7 +11,7 @@ diff --git a/Makefile b/Makefile
  
  build386: ## Build tailscale CLI for linux/386
  	GOOS=linux GOARCH=386 ./tool/go install tailscale.com/cmd/tailscale tailscale.com/cmd/tailscaled
-@@ -43,6 +43,15 @@
+@@ -43,6 +43,15 @@ build386: ## Build tailscale CLI for linux/386
  buildlinuxarm: ## Build tailscale CLI for linux/arm
  	GOOS=linux GOARCH=arm ./tool/go install tailscale.com/cmd/tailscale tailscale.com/cmd/tailscaled
  
@@ -68,3 +27,66 @@ diff --git a/Makefile b/Makefile
  buildwasm: ## Build tailscale CLI for js/wasm
  	GOOS=js GOARCH=wasm ./tool/go install ./cmd/tsconnect/wasm ./cmd/tailscale/cli
  
+diff --git a/net/dns/resolvconfpath_default.go b/net/dns/resolvconfpath_default.go
+index 57e82c4c7..9fa1debab 100644
+--- a/net/dns/resolvconfpath_default.go
++++ b/net/dns/resolvconfpath_default.go
+@@ -6,6 +6,6 @@
+ package dns
+ 
+ const (
+-	resolvConf = "/etc/resolv.conf"
+-	backupConf = "/etc/resolv.pre-tailscale-backup.conf"
++	resolvConf = "/data/adb/tailscale/resolv.conf"
++	backupConf = "/data/adb/tailscale/resolv.pre-tailscale-backup.conf"
+ )
+diff --git a/paths/paths.go b/paths/paths.go
+index 28c3be02a..6c28e0bc0 100644
+--- a/paths/paths.go
++++ b/paths/paths.go
+@@ -30,6 +30,9 @@ func DefaultTailscaledSocket() string {
+ 	if runtime.GOOS == "plan9" {
+ 		return "/srv/tailscaled.sock"
+ 	}
++	if runtime.GOOS == "android" {
++		return "/data/adb/tailscale/tailscaled.sock"
++	}
+ 	switch distro.Get() {
+ 	case distro.Synology:
+ 		if distro.DSMVersion() == 6 {
+diff --git a/paths/paths_unix.go b/paths/paths_unix.go
+index 6a2b28733..2156037f6 100644
+--- a/paths/paths_unix.go
++++ b/paths/paths_unix.go
+@@ -30,6 +30,8 @@ func statePath() string {
+ 		return "/Library/Tailscale/tailscaled.state"
+ 	case "aix":
+ 		return "/var/tailscale/tailscaled.state"
++	case "android":
++		return "/data/adb/tailscale/tailscaled.state"
+ 	default:
+ 		return ""
+ 	}
+diff --git a/version/version_checkformat.go b/version/version_checkformat.go
+deleted file mode 100644
+index 05a97d191..000000000
+--- a/version/version_checkformat.go
++++ /dev/null
+@@ -1,17 +0,0 @@
+-// Copyright (c) Tailscale Inc & AUTHORS
+-// SPDX-License-Identifier: BSD-3-Clause
+-
+-//go:build tailscale_go && android
+-
+-package version
+-
+-import "fmt"
+-
+-func init() {
+-	// For official Android builds using the tailscale_go toolchain,
+-	// panic if the builder is screwed up and we fail to stamp a valid
+-	// version string.
+-	if !isValidLongWithTwoRepos(Long()) {
+-		panic(fmt.Sprintf("malformed version.Long value %q", Long()))
+-	}
+-}
